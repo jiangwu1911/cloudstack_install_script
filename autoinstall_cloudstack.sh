@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 SSH_PUBLIC_KEY='insert_your_ssh_public_key_here'
 
@@ -10,16 +10,36 @@ function add_ssh_public_key() {
     chmod 600 .ssh/authorized_keys
 }
 
+function get_input() {
+    read -p " $1 (default: $2) :" VAR
+    if [ -z $VAR ]; then
+        VAR=$2
+    fi
+    eval $3=$VAR
+}
+
 function get_network_info() {
     echo '* settings for cloud agent'
-    read -p ' hostname   (ex:cloudstack.domain.com)   : ' HOSTNAME
-    HOSTNAME=`echo $HOSTNAME | cut -d. -f1`
-    DOMAIN=`echo $HOSTNAME | cut -d. -f2-`
-    read -p ' ip address (ex:192.168.1.2)  : ' IPADDR
-    read -p ' netmask    (ex:255.255.255.0): ' NETMASK
-    read -p ' gateway    (ex:192.168.1.1)  : ' GATEWAY
-    read -p ' dns1       (ex:192.168.1.1)  : ' DNS1
-    read -p ' dns2       (ex:8.8.4.4)      : ' DNS2
+
+    default_route=$(ip route show)
+    default_interface=$(echo $default_route | sed -e 's/^.*dev \([^ ]*\).*$/\1/' | head -n 1)
+    address=$(ip addr show label $default_interface scope global | awk '$1 == "inet" { print $2,$4}')
+    ip=$(echo $address | awk '{print $1 }')
+    ip=${ip%%/*}
+    broadcast=$(echo $address | awk '{print $2 }')
+    mask=$(route -n |grep 'U[ \t]' | head -n 1 | awk '{print $3}')
+    gateway=$(route -n | grep 'UG[ \t]' | awk '{print $2}')
+    dns=$(cat /etc/resolv.conf | grep nameserver | head -n 1 | awk '{print $2}')
+    fqdn=`hostname --fqdn`
+  
+    get_input ' hostname'   $fqdn       FQDN
+    get_input ' ip address' $ip         IPADDR
+    get_input ' netmask'    $mask       NETMASK
+    get_input ' gateway'    $gateway    GATEWAY
+    get_input ' dns1'       $dns        DNS1
+    get_input ' dns2'       '8.8.8.8'   DNS2
+    HOSTNAME=`echo $FQDN | cut -d. -f1`
+    DOMAIN=`echo $FQDN | cut -d. -f2-`
 }
 
 function get_nfs_info() {
@@ -115,7 +135,7 @@ function initialize_storage() {
 }
 
 function install_agent() {
-    yum install qemu-kvm cloud-agent bridge-utils vconfig -y
+    yum install qemu-kvm libvirt cloud-agent bridge-utils vconfig -y
     modprobe kvm-intel
     echo "group virt {
         cpu {
