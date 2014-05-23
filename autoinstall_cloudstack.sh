@@ -11,7 +11,7 @@ function add_ssh_public_key() {
 }
 
 function get_input() {
-    read -p " $1 (default: $2) :" VAR
+    read -p " $1 (default: $2) : " VAR
     if [ -z $VAR ]; then
         VAR=$2
     fi
@@ -44,20 +44,21 @@ function get_network_info() {
 
 function get_nfs_info() {
     echo '* settings for nfs server'
-    read -p ' NFS Server IP: ' NFS_SERVER_IP
-    read -p ' Primary mount point   (ex:/export/primary)  : ' NFS_SERVER_PRIMARY
-    read -p ' Secondary mount point (ex:/export/secondary): ' NFS_SERVER_SECONDARY
+    get_input ' NFS Server IP' $IPADDR              NFS_SERVER_IP
+    get_input ' Primary mount point' '/primary'     NFS_SERVER_PRIMARY
+    get_input ' Secondary mount point' '/secondary' NFS_SERVER_SECONDARY
 }
 
 function get_nfs_network() {
     echo '* settings for nfs server'
-    read -p ' accept access from (ex:192.168.1.0/24): ' NETWORK
+    net=$(echo $IPADDR | cut -d. -f1-3)'.0/24'
+    get_input ' accept access from' $net            NETWORK
 }
 
 function install_common() {
     yum update -y
-    sed -i -e 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
-    setenforce disabled
+    sed -i -e 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/selinux/config
+    setenforce Permissive
     echo "[cloudstack]
 name=cloudstack
 baseurl=http://192.168.1.124/4.3/
