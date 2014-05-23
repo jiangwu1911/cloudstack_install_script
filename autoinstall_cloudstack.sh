@@ -145,7 +145,7 @@ function install_agent() {
 }" >> /etc/cgconfig.conf
     service cgconfig restart
 
-    echo "vnc_listen=0.0.0.0" >> /etc/libvirt/qemu.conf
+    echo "vnc_listen = \"0.0.0.0\"" >> /etc/libvirt/qemu.conf
 
     echo "listen_tls = 0
 listen_tcp = 1
